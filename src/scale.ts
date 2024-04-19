@@ -1,5 +1,8 @@
 import { By, WebDriver, until } from 'selenium-webdriver'
 
+/**
+ * Representation of the scale UI
+ */
 export default class Scale {
   private driver: WebDriver
   public numWeighs = 0
@@ -9,11 +12,18 @@ export default class Scale {
     this.driver = driver
   }
 
+  /**
+   * Clears the weighing scales by clicking the reset button.
+   */
   private async clearScales(): Promise<void> {
     const resetButton = await this.driver.wait(until.elementLocated(By.xpath("//*[text()='Reset']")))
     resetButton.click()
   }
 
+  /**
+   * Sets the left bricks on the weighing scales
+   * @param values - The weight of each brick in the left bowl
+   */
   private async setLeftBricks(values: number[]): Promise<void> {
     for (let i = 0; i < values.length; i++) {
       const input = await this.driver.findElement(By.id(`left_${i}`))
@@ -21,6 +31,10 @@ export default class Scale {
     }
   }
 
+  /**
+   * Sets the right bricks on the weighing scales
+   * @param values - The weight of each brick in the right bowl
+   */
   private async setRightBricks(values: number[]): Promise<void> {
     for (let i = 0; i < values.length; i++) {
       const input = await this.driver.findElement(By.id(`right_${i}`))
@@ -28,19 +42,38 @@ export default class Scale {
     }
   }
 
-  async weighBricks(leftBricks: number[], rightBricks: number[], unweighedBricks: number[]): Promise<number[]> {
-    await this.setLeftBricks(leftBricks)
-    await this.setRightBricks(rightBricks)
-    if (await this.weigh() === '=') return unweighedBricks
-    else {
+  /**
+   * Weighs the given bricks on the scale, returning one third of the bricks
+   * that do not weigh the same as the others
+   * @param bricks - The bricks to be weighed
+   * @returns The set of bricks that contain the impostor brick
+   */
+  async findFakeBrick(inputBricks: number[]): Promise<number> {
+    let bricks = [...inputBricks]
+    while (bricks.length > 1) {
+      const groupSize = bricks.length / 3
+      const leftBricks = bricks.splice(0, groupSize)
+      const rightBricks = bricks.splice(0, groupSize)
+      const unweighedBricks = [...bricks]
       await this.setLeftBricks(leftBricks)
-      await this.setRightBricks(unweighedBricks)
-      if (await this.weigh() === '=') return rightBricks
-      else return leftBricks
+      await this.setRightBricks(rightBricks)
+      if (await this.weighBricks() === '=') bricks = unweighedBricks
+      else {
+        await this.setLeftBricks(leftBricks)
+        await this.setRightBricks(unweighedBricks)
+        if (await this.weighBricks() === '=') bricks = rightBricks
+        else bricks = leftBricks
+      }
     }
+    return bricks[0]
   }
 
-  private async weigh(): Promise<string> {
+  /**
+   * Clicks the weigh button to weigh the bricks currently in the scale, then
+   * fetches all the results. Also clears the scales after the weighing is done.
+   * @returns a string representation of the result of the weighing (either =, <, or >)
+   */
+  private async weighBricks(): Promise<string> {
     this.numWeighs++
     const weighButton = await this.driver.wait(until.elementLocated(By.id("weigh")))
     await weighButton.click()

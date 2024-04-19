@@ -14,15 +14,8 @@ async function weighBars() {
 
     // Weigh
     let bricks = [0, 1, 2, 3, 4, 5, 6, 7, 8]
-    while (bricks.length > 1) {
-      const groupSize = bricks.length / 3
-      const leftBricks = bricks.splice(0, groupSize)
-      const rightBricks = bricks.splice(0, groupSize)
-      const unweighedBricks = [...bricks]
-      bricks = await scale.weighBricks(leftBricks, rightBricks, unweighedBricks)
-    }
-    const fakeBrick = bricks[0]
-    console.log(`⚖️ Fake Brick = ${fakeBrick}`)
+    const fakeBrick = await scale.findFakeBrick(bricks)
+    console.log(`⚖️ Fake Brick #${fakeBrick} found in ${scale.numWeighs} attempts`)
 
     // Result
     await driver.findElement(By.id(`coin_${fakeBrick}`)).click()
